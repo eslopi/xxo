@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+
 <html lang="ar" dir="rtl">
 <head>
   <meta charset="UTF-8">
@@ -16,19 +17,23 @@
       padding: 0;
       height: 100vh;
       display: flex;
-      justify-content: center;
-      align-items: center;
+      flex-direction: column;
+    }
+
+    .header {
+      width: 100%;
+      padding: 15px 20px;
+      background-color: #f4f4f4;
+      color: #333;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      text-align: center;
     }
 
     .container {
       display: flex;
       width: 100%;
-      max-width: 100%;
       background-color: white;
-      border-radius: 10px;
-      box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
-      height: 100vh;
-      position: relative;
+      height: calc(100vh - 50px);
     }
 
     #map-container {
@@ -63,7 +68,6 @@
       width: 50%;
       padding: 20px;
       background-color: #f9f9f9;
-      border-radius: 5px;
       overflow-y: auto;
       height: 100%;
     }
@@ -94,7 +98,7 @@
       background-color: #222;
     }
 
-    /* صندوق الدردشة المنبثق */
+    /* النوافذ المنبثقة للدردشة */
     .popup-chat-container {
       display: none;
       position: fixed;
@@ -162,7 +166,7 @@
       cursor: pointer;
     }
 
-    /* قسم المتواجدين في الدردشة الحية */
+    /* قائمة المتواجدين حاليًا */
     .user-list {
       background-color: #f1f1f1;
       padding: 10px;
@@ -183,15 +187,19 @@
       margin-bottom: 5px;
       border-radius: 5px;
     }
-
   </style>
 
   <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-firestore-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-auth-compat.js"></script>
 </head>
 <body>
+  <!-- رأس الصفحة -->
+  <div class="header">
+    <h1>MS|MV</h1>
+    <h3>اكتشف - تفاعل - شارك</h3>
+  </div>
 
+  <!-- الحاوية الرئيسية -->
   <div class="container">
     <div id="map-container">
       <button id="locateButton">📍 تحديد موقعي الحالي</button>
@@ -199,26 +207,41 @@
     </div>
 
     <div id="info-container">
-      <h1>MS|MV</h1>
+      <h2>معلومات الأماكن</h2>
       <div id="place-info">
         <h3 id="place-name"></h3>
         <p id="place-description"></p>
         <img id="place-image" src="" alt="صورة المكان">
-        <button id="botChat" class="chat-button">🛠 MS|MV مساعد بوت</button>
-        <button id="liveChat" class="chat-button">💬 دردشة حية مع المتواجدين</button>
+        <button id="botChat" class="chat-button" onclick="openBotChat()">🛠 MS|MV مساعد بوت</button>
+        <button id="liveChat" class="chat-button" onclick="openLiveChat()">💬 دردشة حية مع المتواجدين</button>
       </div>
-      <p id="no-selection">انقر على أحد الماركرات لعرض المعلومات.</p>
+      <p id="no-selection">انقر على أحد المواقع لعرض المعلومات.</p>
     </div>
   </div>
 
-  <!-- نافذة الدردشة المنبثقة مع المتواجدين -->
+  <!-- نافذة دردشة البوت المنبثقة -->
+  <div id="botChatPopup" class="popup-chat-container">
+    <div class="popup-chat-header">
+      <h3>مساعد بوت</h3>
+      <button onclick="closeBotChat()">✖</button>
+    </div>
+    <div class="popup-chat-body" id="botChatMessages">
+      <!-- سيتم إضافة رسائل الدردشة هنا -->
+    </div>
+    <div class="popup-chat-footer">
+      <input type="text" id="botChatInput" placeholder="اكتب سؤالك هنا..." />
+      <button onclick="sendBotChatMessage()">إرسال</button>
+    </div>
+  </div>
+
+  <!-- نافذة الدردشة الحية المنبثقة -->
   <div id="liveChatPopup" class="popup-chat-container">
     <div class="popup-chat-header">
       <h3>دردشة حية</h3>
       <button onclick="closeLiveChat()">✖</button>
     </div>
     <div class="popup-chat-body" id="liveChatMessages">
-      <!-- سيتم إضافة الرسائل هنا -->
+      <!-- سيتم إضافة رسائل الدردشة هنا -->
     </div>
     <div class="user-list">
       <h4>المتواجدون حاليًا:</h4>
@@ -228,26 +251,12 @@
     </div>
     <div class="popup-chat-footer">
       <input type="text" id="liveChatInput" placeholder="اكتب رسالة..." />
-      <button id="sendLiveButton" onclick="sendLiveChatMessage()">إرسال</button>
-    </div>
-  </div>
-
-  <!-- نافذة دردشة البوت المنبثقة بدون قائمة المتواجدين -->
-  <div id="botChatPopup" class="popup-chat-container">
-    <div class="popup-chat-header">
-      <h3>مساعد بوت</h3>
-      <button onclick="closeBotChat()">✖</button>
-    </div>
-    <div class="popup-chat-body" id="botChatMessages">
-      <!-- سيتم إضافة الرسائل هنا -->
-    </div>
-    <div class="popup-chat-footer">
-      <input type="text" id="botChatInput" placeholder="اكتب سؤالك هنا..." />
-      <button id="sendBotButton" onclick="sendBotChatMessage()">إرسال</button>
+      <button onclick="sendLiveChatMessage()">إرسال</button>
     </div>
   </div>
 
   <script>
+    // إعداد Firebase و Mapbox
     const firebaseConfig = {
       apiKey: "AIzaSyAzNFMx0l3x-1qSB7zYEHJwasBnkPOfpg0",
       authDomain: "ms-mv-71de8.firebaseapp.com",
@@ -258,11 +267,14 @@
       measurementId: "G-XKKEK82ZPD"
     };
 
-    const app = firebase.initializeApp(firebaseConfig);
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
     const db = firebase.firestore();
 
+    // إعداد خريطة Mapbox
     mapboxgl.accessToken = 'pk.eyJ1IjoiZXNsb3BpIiwiYSI6ImNtMWV6OHI3eDFoeGMybHF6bmR0OXcwbWIifQ.PgBVsl5bPmcOQ_47NDK10A';
-    var map = new mapboxgl.Map({
+    const map = new mapboxgl.Map({
       container: 'map',
       style: 'mapbox://styles/mapbox/streets-v11',
       center: [46.6753, 24.7136],
@@ -271,13 +283,13 @@
 
     db.collection("places").get().then((querySnapshot) => {
       querySnapshot.forEach((doc) => {
-        var place = doc.data();
+        const place = doc.data();
         addPlaceMarker(place.name, place.description, place.latitude, place.longitude, place.imageUrl);
       });
     });
 
     function addPlaceMarker(name, description, latitude, longitude, imageUrl) {
-      var marker = new mapboxgl.Marker()
+      const marker = new mapboxgl.Marker()
         .setLngLat([longitude, latitude])
         .addTo(map);
 
@@ -288,16 +300,15 @@
         document.getElementById('place-image').src = imageUrl;
         document.getElementById('place-image').alt = name;
         document.getElementById('no-selection').style.display = 'none';
-        document.getElementById('botChat').onclick = openBotChat;
-        document.getElementById('liveChat').onclick = openLiveChat;
       });
     }
 
+    // تحديد الموقع الحالي
     document.getElementById('locateButton').addEventListener('click', function() {
       if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function(position) {
-          var lat = position.coords.latitude;
-          var lon = position.coords.longitude;
+          const lat = position.coords.latitude;
+          const lon = position.coords.longitude;
           map.flyTo({ center: [lon, lat], zoom: 14 });
           new mapboxgl.Marker().setLngLat([lon, lat]).addTo(map);
         }, function() {
@@ -308,28 +319,27 @@
       }
     });
 
-    // فتح وإغلاق نافذة الدردشة الحية
-    function openLiveChat() {
-      document.getElementById('liveChatPopup').style.display = 'flex';
-      loadLiveChatMessages(); // تحميل الرسائل عند فتح الدردشة
-      loadLiveUsers(); // تحميل قائمة المتواجدين حاليًا
-    }
-
-    function closeLiveChat() {
-      document.getElementById('liveChatPopup').style.display = 'none';
-    }
-
-    // فتح وإغلاق نافذة دردشة البوت
+    // فتح وإغلاق الدردشة
     function openBotChat() {
       document.getElementById('botChatPopup').style.display = 'flex';
-      loadBotChatMessages(); // تحميل رسائل البوت
+      loadBotChatMessages();
     }
 
     function closeBotChat() {
       document.getElementById('botChatPopup').style.display = 'none';
     }
 
-    // إرسال رسالة للدردشة الحية
+    function openLiveChat() {
+      document.getElementById('liveChatPopup').style.display = 'flex';
+      loadLiveChatMessages();
+      loadLiveUsers();
+    }
+
+    function closeLiveChat() {
+      document.getElementById('liveChatPopup').style.display = 'none';
+    }
+
+    // إرسال واستقبال الرسائل
     function sendLiveChatMessage() {
       const message = document.getElementById('liveChatInput').value;
       if (message.trim() !== "") {
@@ -337,14 +347,11 @@
           message: message,
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
-          document.getElementById('liveChatInput').value = ""; // تفريغ الحقل
-        }).catch(error => {
-          console.error("Error sending message: ", error);
-        });
+          document.getElementById('liveChatInput').value = "";
+        }).catch(error => console.error("Error sending message: ", error));
       }
     }
 
-    // إرسال رسالة لمساعد البوت
     function sendBotChatMessage() {
       const message = document.getElementById('botChatInput').value;
       if (message.trim() !== "") {
@@ -352,60 +359,51 @@
           message: message,
           timestamp: firebase.firestore.FieldValue.serverTimestamp()
         }).then(() => {
-          document.getElementById('botChatInput').value = ""; // تفريغ الحقل
-        }).catch(error => {
-          console.error("Error sending message: ", error);
-        });
+          document.getElementById('botChatInput').value = "";
+        }).catch(error => console.error("Error sending message: ", error));
       }
     }
 
-    // تحميل رسائل الدردشة الحية من Firestore
     function loadLiveChatMessages() {
       db.collection("liveChat").orderBy("timestamp").onSnapshot(snapshot => {
         const chatMessages = document.getElementById('liveChatMessages');
-        chatMessages.innerHTML = ""; // مسح الرسائل القديمة
+        chatMessages.innerHTML = "";
         snapshot.forEach(doc => {
           const messageData = doc.data();
           const messageElement = document.createElement('div');
           messageElement.classList.add('message');
-          messageElement.innerHTML = `
-            <div class="text-container">${messageData.message}</div>
-          `;
+          messageElement.innerHTML = `<div class="text-container">${messageData.message}</div>`;
           chatMessages.appendChild(messageElement);
         });
-        chatMessages.scrollTop = chatMessages.scrollHeight; // تمرير للأسفل تلقائيًا
+        chatMessages.scrollTop = chatMessages.scrollHeight;
       });
     }
 
-    // تحميل قائمة المتواجدين حاليًا في الدردشة الحية
+    function loadBotChatMessages() {
+      db.collection("botChat").orderBy("timestamp").onSnapshot(snapshot => {
+        const botMessages = document.getElementById('botChatMessages');
+        botMessages.innerHTML = "";
+        snapshot.forEach(doc => {
+          const messageData = doc.data();
+          const messageElement = document.createElement('div');
+          messageElement.classList.add('message');
+          messageElement.innerHTML = `<div class="text-container">${messageData.message}</div>`;
+          botMessages.appendChild(messageElement);
+        });
+        botMessages.scrollTop = botMessages.scrollHeight;
+      });
+    }
+
     function loadLiveUsers() {
       db.collection("liveUsers").onSnapshot(snapshot => {
         const liveUserList = document.getElementById('liveUserList');
-        liveUserList.innerHTML = ""; // مسح القائمة القديمة
+        liveUserList.innerHTML = "";
         snapshot.forEach(doc => {
           const userData = doc.data();
           const userElement = document.createElement('li');
           userElement.textContent = userData.name;
           liveUserList.appendChild(userElement);
         });
-      });
-    }
-
-    // تحميل رسائل دردشة البوت من Firestore
-    function loadBotChatMessages() {
-      db.collection("botChat").orderBy("timestamp").onSnapshot(snapshot => {
-        const botMessages = document.getElementById('botChatMessages');
-        botMessages.innerHTML = ""; // مسح الرسائل القديمة
-        snapshot.forEach(doc => {
-          const messageData = doc.data();
-          const messageElement = document.createElement('div');
-          messageElement.classList.add('message');
-          messageElement.innerHTML = `
-            <div class="text-container">${messageData.message}</div>
-          `;
-          botMessages.appendChild(messageElement);
-        });
-        botMessages.scrollTop = botMessages.scrollHeight; // تمرير للأسفل تلقائيًا
       });
     }
   </script>
