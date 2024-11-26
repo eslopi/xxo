@@ -26,12 +26,12 @@
       background-color: white;
       border-radius: 10px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-      height: 100vh; /* استخدم 100vh لتغطية ارتفاع الشاشة بالكامل */
+      height: 100vh;
     }
     #map-container {
       width: 50%;
       position: relative;
-      height: 100%; /* التأكد من أن الخريطة تغطي ارتفاع الحاوية بالكامل */
+      height: 100%;
     }
     #map {
       height: 100%;
@@ -58,7 +58,7 @@
       background-color: #f9f9f9;
       border-radius: 5px;
       overflow-y: auto;
-      height: 100%; /* تأكد من تغطية الحاوية كاملة لطول الصفحة */
+      height: 100%;
     }
     #place-info {
       display: none;
@@ -68,7 +68,6 @@
       height: auto;
       border-radius: 5px;
     }
-    /* أزرار الدردشة */
     .chat-button {
       margin-top: 10px;
       padding: 10px 20px;
@@ -107,7 +106,6 @@
       <button id="locateButton">📍 تحديد موقعي الحالي</button>
       <!-- خريطة ماب بوكس -->
       <div id="map"></div>
-
     </div>
 
     <!-- النصف الأيسر لعرض تفاصيل الأماكن -->
@@ -124,7 +122,6 @@
       </div>
       <p id="no-selection">انقر على أحد الماركرات لعرض المعلومات.</p>
     </div>
-
   </div>
 
   <script>
@@ -173,17 +170,15 @@
         document.getElementById('place-description').textContent = description;
         document.getElementById('place-image').src = imageUrl;
         document.getElementById('place-image').alt = name;
-        document.getElementById('no-selection').style.display = 'none'; // إخفاء الرسالة الأولية
+        document.getElementById('no-selection').style.display = 'none';
 
         // ربط أزرار الدردشة مع الإجراءات
         document.getElementById('botChat').addEventListener('click', function() {
           alert("سيتم فتح MS|MV مساعد بوت للمساعدة في هذا المكان.");
-          // يمكن إضافة هنا تنفيذ فتح محادثة البوت
         });
 
         document.getElementById('liveChat').addEventListener('click', function() {
           alert("سيتم فتح دردشة حية مع الأشخاص المتواجدين في هذا المكان.");
-          // يمكن إضافة هنا تنفيذ فتح دردشة حية
         });
       });
     }
