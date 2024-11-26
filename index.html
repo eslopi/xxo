@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>عرض الأماكن</title>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js"></script>
+  <style>
+    body {
+      font-family: 'Cairo', sans-serif;
+      direction: rtl;
+      background-color: #f4f4f4;
+      color: #333;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .container {
+      display: flex;
+      width: 100%;
+      max-width: 100%;
+      background-color: white;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      height: 100vh; /* استخدم 100vh لتغطية ارتفاع الشاشة بالكامل */
+    }
+    #map-container {
+      width: 50%;
+      position: relative;
+      height: 100%; /* التأكد من أن الخريطة تغطي ارتفاع الحاوية بالكامل */
+    }
+    #map {
+      height: 100%;
+      width: 100%;
+    }
+    #locateButton {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 1;
+      background-color: #0f3460;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #locateButton:hover {
+      background-color: #0d2c50;
+    }
+    #info-container {
+      width: 50%;
+      padding: 20px;
+      background-color: #f9f9f9;
+      border-radius: 5px;
+      overflow-y: auto;
+      height: 100%; /* تأكد من تغطية الحاوية كاملة لطول الصفحة */
+    }
+    #place-info {
+      display: none;
+    }
+    #place-info img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 5px;
+    }
+    /* أزرار الدردشة */
+    .chat-button {
+      margin-top: 10px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      font-size: 16px;
+    }
+    #botChat {
+      background-color: #0f3460;
+      color: white;
+    }
+    #botChat:hover {
+      background-color: #0d2c50;
+    }
+    #liveChat {
+      background-color: #00b894;
+      color: white;
+    }
+    #liveChat:hover {
+      background-color: #009f73;
+    }
+  </style>
+
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+  <div class="container">
+    <!-- النصف الأيمن للخريطة -->
+    <div id="map-container">
+      <!-- زر لتحديد الموقع الحالي -->
+      <button id="locateButton">📍 تحديد موقعي الحالي</button>
+      <!-- خريطة ماب بوكس -->
+      <div id="map"></div>
+
+    </div>
+
+    <!-- النصف الأيسر لعرض تفاصيل الأماكن -->
+    <div id="info-container">
+      <h1>تفاصيل المكان</h1>
+      <div id="place-info">
+        <h3 id="place-name"></h3>
+        <p id="place-description"></p>
+        <img id="place-image" src="" alt="صورة المكان">
+        
+        <!-- أزرار الدردشة -->
+        <button id="botChat" class="chat-button">🛠 MS|MV مساعد بوت</button>
+        <button id="liveChat" class="chat-button">💬 دردشة حية مع المتواجدين</button>
+      </div>
+      <p id="no-selection">انقر على أحد الماركرات لعرض المعلومات.</p>
+    </div>
+
+  </div>
+
+  <script>
+    // إعدادات Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAzNFMx0l3x-1qSB7zYEHJwasBnkPOfpg0",
+      authDomain: "ms-mv-71de8.firebaseapp.com",
+      projectId: "ms-mv-71de8",
+      storageBucket: "ms-mv-71de8.appspot.com",
+      messagingSenderId: "11803494011",
+      appId: "1:11803494011:web:313992c0215928cb3b44de",
+      measurementId: "G-XKKEK82ZPD"
+    };
+
+    // تهيئة Firebase
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // تهيئة Mapbox
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZXNsb3BpIiwiYSI6ImNtMWV6OHI3eDFoeGMybHF6bmR0OXcwbWIifQ.PgBVsl5bPmcOQ_47NDK10A';
+    var map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v11',
+      center: [46.6753, 24.7136], // الرياض
+      zoom: 10
+    });
+
+    // جلب الأماكن المضافة من Firestore
+    db.collection("places").get().then((querySnapshot) => {
+      querySnapshot.forEach((doc) => {
+        var place = doc.data();
+        addPlaceMarker(place.name, place.description, place.latitude, place.longitude, place.imageUrl);
+      });
+    });
+
+    // إضافة ماركر على الخريطة
+    function addPlaceMarker(name, description, latitude, longitude, imageUrl) {
+      var marker = new mapboxgl.Marker()
+        .setLngLat([longitude, latitude])
+        .addTo(map);
+
+      // عرض المعلومات عند الضغط على الماركر
+      marker.getElement().addEventListener('click', function() {
+        document.getElementById('place-info').style.display = 'block';
+        document.getElementById('place-name').textContent = name;
+        document.getElementById('place-description').textContent = description;
+        document.getElementById('place-image').src = imageUrl;
+        document.getElementById('place-image').alt = name;
+        document.getElementById('no-selection').style.display = 'none'; // إخفاء الرسالة الأولية
+
+        // ربط أزرار الدردشة مع الإجراءات
+        document.getElementById('botChat').addEventListener('click', function() {
+          alert("سيتم فتح MS|MV مساعد بوت للمساعدة في هذا المكان.");
+          // يمكن إضافة هنا تنفيذ فتح محادثة البوت
+        });
+
+        document.getElementById('liveChat').addEventListener('click', function() {
+          alert("سيتم فتح دردشة حية مع الأشخاص المتواجدين في هذا المكان.");
+          // يمكن إضافة هنا تنفيذ فتح دردشة حية
+        });
+      });
+    }
+
+    // زر لتحديد الموقع الحالي
+    document.getElementById('locateButton').addEventListener('click', function() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var lat = position.coords.latitude;
+          var lon = position.coords.longitude;
+
+          // تحريك الخريطة إلى الموقع الحالي
+          map.flyTo({
+            center: [lon, lat],
+            zoom: 14
+          });
+
+          // إضافة ماركر في الموقع الحالي
+          new mapboxgl.Marker()
+            .setLngLat([lon, lat])
+            .addTo(map);
+        }, function() {
+          alert('غير قادر على تحديد موقعك. يرجى التحقق من إعدادات الموقع في متصفحك.');
+        });
+      } else {
+        alert('متصفحك لا يدعم تحديد الموقع الجغرافي.');
+      }
+    });
+  </script>
+</body>
+</html>
