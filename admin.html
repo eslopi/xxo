@@ -120,4 +120,160 @@
       <label for="longitude">خط الطول:</label>
       <input type="text" id="longitude" name="longitude" required readonly>
 
-      <label for="imageUrl">ر
+      <label for="imageUrl">رابط الصورة:</label>
+      <input type="text" id="imageUrl" name="imageUrl" required>
+
+      <button type="submit" id="submitButton">إضافة المكان</button>
+ </form>
+
+    <!-- جدول عرض الأماكن المضافة -->
+    <h2>الأماكن المضافة</h2>
+    <table id="venuesTable">
+      <thead>
+        <tr>
+          <th>اسم المكان</th>
+          <th>الوصف</th>
+          <th>الإحداثيات</th>
+          <th>رابط الصورة</th>
+          <th>تعديل</th>
+          <th>حذف</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- سيتم عرض الأماكن هنا -->
+      </tbody>
+    </table>
+  </div>
+
+  <script>
+    // إعدادات Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyAzNFMx0l3x-1qSB7zYEHJwasBnkPOfpg0",
+      authDomain: "ms-mv-71de8.firebaseapp.com",
+      projectId: "ms-mv-71de8",
+      storageBucket: "ms-mv-71de8.appspot.com",
+      messagingSenderId: "11803494011",
+      appId: "1:11803494011:web:313992c0215928cb3b44de",
+      measurementId: "G-XKKEK82ZPD"
+    };
+
+    const app = firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    // تهيئة Mapbox
+    mapboxgl.accessToken = 'pk.eyJ1IjoiZXNsb3BpIiwiYSI6ImNtMWV6OHI3eDFoeGMybHF6bmR0OXcwbWIifQ.PgBVsl5bPmcOQ_47NDK10A';
+    var map = new mapboxgl.Map({
+      container: 'map',
+      style: 'mapbox://styles/mapbox/streets-v11',
+      center: [46.6753, 24.7136],
+      zoom: 10
+    });
+
+    // التعامل مع النقر على الخريطة لتحديث الإحداثيات
+    map.on('click', function (e) {
+      var lat = e.lngLat.lat;
+      var lon = e.lngLat.lng;
+      document.getElementById('latitude').value = lat;
+      document.getElementById('longitude').value = lon;
+    });
+
+    // زر تحديد الموقع الحالي
+    document.getElementById('locateButton').addEventListener('click', function() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(function(position) {
+          var lat = position.coords.latitude;
+          var lon = position.coords.longitude;
+          document.getElementById('latitude').value = lat;
+          document.getElementById('longitude').value = lon;
+          map.flyTo({ center: [lon, lat], zoom: 14 });
+          new mapboxgl.Marker().setLngLat([lon, lat]).addTo(map);
+        });
+      } else {
+        alert('المتصفح لا يدعم تحديد الموقع الجغرافي.');
+      }
+    });
+
+    // إرسال النموذج لإضافة أو تعديل المكان
+    document.getElementById('venueForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      var placeId = document.getElementById('placeId').value;
+      var name = document.getElementById('name').value;
+      var description = document.getElementById('description').value;
+      var latitude = document.getElementById('latitude').value;
+      var longitude = document.getElementById('longitude').value;
+      var imageUrl = document.getElementById('imageUrl').value;
+
+      if (placeId) {
+        // تعديل مكان
+        db.collection("places").doc(placeId).update({
+          name: name,
+          description: description,
+          latitude: latitude,
+          longitude: longitude,
+          imageUrl: imageUrl
+        }).then(() => {
+          document.getElementById('venueForm').reset();
+          document.getElementById('submitButton').textContent = "إضافة المكان";
+          loadPlaces();
+        });
+      } else {
+        // إضافة مكان جديد
+        db.collection("places").add({
+          name: name,
+          description: description,
+          latitude: latitude,
+          longitude: longitude,
+          imageUrl: imageUrl
+        }).then((docRef) => {
+          document.getElementById('venueForm').reset();
+          loadPlaces();
+        });
+      }
+    });
+
+    // تحميل الأماكن من Firebase
+    function loadPlaces() {
+      db.collection("places").get().then((querySnapshot) => {
+        const venuesTableBody = document.getElementById('venuesTable').getElementsByTagName('tbody')[0];
+        venuesTableBody.innerHTML = ''; // مسح الجدول قبل إضافة البيانات الجديدة
+        querySnapshot.forEach((doc) => {
+          const place = doc.data();
+          const row = venuesTableBody.insertRow();
+          row.insertCell(0).textContent = place.name;
+          row.insertCell(1).textContent = place.description;
+          row.insertCell(2).textContent = `${place.latitude}, ${place.longitude}`;
+          row.insertCell(3).innerHTML = `<img src="${place.imageUrl}" alt="${place.name}" style="width: 100px; height: auto;">`;
+          
+          const editCell = row.insertCell(4);
+          const editButton = document.createElement('button');
+          editButton.textContent = 'تعديل';
+          editButton.onclick = function() {
+            document.getElementById('placeId').value = doc.id;
+            document.getElementById('name').value = place.name;
+            document.getElementById('description').value = place.description;
+            document.getElementById('latitude').value = place.latitude;
+            document.getElementById('longitude').value = place.longitude;
+            document.getElementById('imageUrl').value = place.imageUrl;
+            document.getElementById('submitButton').textContent = "تحديث المكان";
+          };
+          editCell.appendChild(editButton);
+
+          const deleteCell = row.insertCell(5);
+          const deleteButton = document.createElement('button');
+          deleteButton.textContent = 'حذف';
+          deleteButton.onclick = function() {
+            db.collection("places").doc(doc.id).delete().then(() => {
+              loadPlaces();
+            });
+          };
+          deleteCell.appendChild(deleteButton);
+        });
+      });
+    }
+
+    // تحميل الأماكن عند تحميل الصفحة
+    window.onload = loadPlaces;
+  </script>
+</body>
+</html>
