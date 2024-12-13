@@ -3,187 +3,137 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>تطبيق خريطة مشابه لـ Snapchat</title>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?display=swap&amp;family=Be+Vietnam+Pro:wght@400;500;700;900&amp;family=Noto+Sans:wght@400;500;700;900"
+  />
+  <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
   <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css" rel="stylesheet" />
   <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.6.8/firebase-firestore-compat.js"></script>
+  <title>تطبيق خريطة تفاعلية</title>
   <style>
     body {
-      font-family: 'Cairo', sans-serif;
+      font-family: "Be Vietnam Pro", "Noto Sans", sans-serif;
       margin: 0;
       padding: 0;
       height: 100vh;
       overflow: hidden;
-      background-color: black;
-    }
-    .container {
-      position: relative;
-      height: 100vh;
-      width: 100%;
+      background-color: #111418;
     }
     #map {
-      height: 100%;
       width: 100%;
+      height: calc(100vh - 160px); /* الخريطة تأخذ معظم الشاشة */
     }
-    .floating-button {
-      position: absolute;
-      z-index: 2;
-      background-color: rgba(0, 0, 0, 0.7);
-      color: white;
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      cursor: pointer;
-      font-size: 24px;
-    }
-    #locateButton {
-      bottom: 80px;
-      right: 20px;
-    }
-    #info-panel {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      width: 100%;
-      background-color: white;
-      border-radius: 20px 20px 0 0;
-      box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.2);
-      max-height: 50%;
-      overflow-y: auto;
+    .info-panel {
+      background-color: #1c2126;
       padding: 20px;
-      display: none;
-      transition: transform 0.3s ease-in-out;
-      transform: translateY(100%);
-    }
-    #info-panel.active {
-      transform: translateY(0);
-    }
-    #info-panel h3 {
-      font-size: 20px;
-      font-weight: bold;
-      color: #333;
-      margin-bottom: 15px;
-    }
-    #info-panel img {
-      max-width: 100%;
+      color: white;
       border-radius: 10px;
+      margin: 20px;
+      display: none;
+    }
+    .info-panel img {
+      width: 100%;
+      border-radius: 8px;
       margin-bottom: 15px;
-      border: 2px solid #ddd;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     }
-    #info-panel p {
-      font-size: 16px;
-      color: #555;
-      line-height: 1.5;
+    .info-panel h3 {
+      font-size: 18px;
+      margin-bottom: 10px;
     }
-    #info-panel .close {
-      position: absolute;
-      top: 10px;
-      right: 20px;
-      cursor: pointer;
-      font-size: 20px;
-      color: gray;
+    .info-panel p {
+      font-size: 14px;
+      color: #9dabb8;
     }
   </style>
 </head>
 <body>
-  <div class="container">
+  <div class="relative flex flex-col min-h-screen bg-[#111418]">
+    <!-- خريطة -->
     <div id="map"></div>
 
-    <!-- زر تحديد الموقع -->
-    <button id="locateButton" class="floating-button">📍</button>
-
-    <!-- لوحة المعلومات -->
-    <div id="info-panel">
-      <span class="close">&times;</span>
+    <!-- لوحة عرض المعلومات -->
+    <div id="info-panel" class="info-panel">
+      <img id="place-image" src="" alt="صورة المكان" />
       <h3 id="place-name">اسم المكان</h3>
       <p id="place-description">وصف المكان</p>
-      <img id="place-image" src="" alt="صورة المكان">
+      <button
+        onclick="closeInfoPanel()"
+        class="bg-[#1466b8] text-white px-4 py-2 rounded mt-4"
+      >
+        إغلاق
+      </button>
+    </div>
+
+    <!-- شريط التنقل السفلي -->
+    <div class="flex gap-2 border-t border-[#293038] bg-[#1c2126] px-4 py-3">
+      <a href="#" class="flex-1 text-center text-white">
+        <div>🗺️</div>
+        <p class="text-sm">الخريطة</p>
+      </a>
+      <a href="#" class="flex-1 text-center text-[#9dabb8]">
+        <div>📸</div>
+        <p class="text-sm">الكاميرا</p>
+      </a>
+      <a href="#" class="flex-1 text-center text-[#9dabb8]">
+        <div>👤</div>
+        <p class="text-sm">الملف الشخصي</p>
+      </a>
     </div>
   </div>
 
   <script>
-    // إعداد Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyAzNFMx0l3x-1qSB7zYEHJwasBnkPOfpg0",
-      authDomain: "ms-mv-71de8.firebaseapp.com",
-      projectId: "ms-mv-71de8",
-      storageBucket: "ms-mv-71de8.appspot.com",
-      messagingSenderId: "11803494011",
-      appId: "1:11803494011:web:313992c0215928cb3b44de",
-      measurementId: "G-XKKEK82ZPD"
-    };
-
-    const app = firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
     // إعداد Mapbox
-    mapboxgl.accessToken = 'pk.eyJ1IjoiZXNsb3BpIiwiYSI6ImNtMWV6OHI3eDFoeGMybHF6bmR0OXcwbWIifQ.PgBVsl5bPmcOQ_47NDK10A';
-    var map = new mapboxgl.Map({
-      container: 'map',
-      style: 'mapbox://styles/mapbox/streets-v11',
+    mapboxgl.accessToken = "pk.eyJ1IjoiZXNsb3BpIiwiYSI6ImNtMWV6OHI3eDFoeGMybHF6bmR0OXcwbWIifQ.PgBVsl5bPmcOQ_47NDK10A";
+    const map = new mapboxgl.Map({
+      container: "map",
+      style: "mapbox://styles/mapbox/streets-v11",
       center: [46.6753, 24.7136], // الرياض
-      zoom: 10
+      zoom: 10,
     });
 
-    // جلب الأماكن من Firebase
-    db.collection("places").get().then((querySnapshot) => {
-      querySnapshot.forEach((doc) => {
-        var place = doc.data();
-        addPlaceMarker(place.name, place.description, place.latitude, place.longitude, place.imageUrl);
-      });
-    });
+    // علامات (Markers)
+    const places = [
+      {
+        name: "حديقة الملك عبد الله",
+        description: "حديقة جميلة تحتوي على مساحات خضراء ومرافق ترفيهية.",
+        latitude: 24.7136,
+        longitude: 46.6753,
+        imageUrl: "https://via.placeholder.com/300",
+      },
+      {
+        name: "برج المملكة",
+        description: "أحد أشهر المعالم في الرياض مع مركز تسوق فاخر.",
+        latitude: 24.7113,
+        longitude: 46.6745,
+        imageUrl: "https://via.placeholder.com/300",
+      },
+    ];
 
-    function addPlaceMarker(name, description, latitude, longitude, imageUrl) {
+    // إضافة علامات إلى الخريطة
+    places.forEach((place) => {
       const marker = new mapboxgl.Marker()
-        .setLngLat([longitude, latitude])
+        .setLngLat([place.longitude, place.latitude])
         .addTo(map);
 
-      marker.getElement().addEventListener('click', function () {
-        const panel = document.getElementById('info-panel');
-        document.getElementById('place-name').textContent = name;
-        document.getElementById('place-description').textContent = description;
-        const imgElement = document.getElementById('place-image');
-        imgElement.src = imageUrl || ''; // تجنب أخطاء إذا لم تكن الصورة متوفرة
-        imgElement.style.display = imageUrl ? 'block' : 'none'; // إخفاء الصورة إذا لم تتوفر
-        panel.style.display = 'block';
-        panel.classList.add('active');
+      // عرض المعلومات عند الضغط
+      marker.getElement().addEventListener("click", () => {
+        openInfoPanel(place.name, place.description, place.imageUrl);
       });
+    });
+
+    // فتح لوحة المعلومات
+    function openInfoPanel(name, description, imageUrl) {
+      document.getElementById("place-name").textContent = name;
+      document.getElementById("place-description").textContent = description;
+      document.getElementById("place-image").src = imageUrl;
+      document.getElementById("info-panel").style.display = "block";
     }
 
-    // زر تحديد الموقع
-    document.getElementById('locateButton').addEventListener('click', function () {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(function (position) {
-          var lat = position.coords.latitude;
-          var lon = position.coords.longitude;
-
-          map.flyTo({
-            center: [lon, lat],
-            zoom: 14
-          });
-
-          new mapboxgl.Marker()
-            .setLngLat([lon, lat])
-            .addTo(map);
-        });
-      } else {
-        alert('جهازك لا يدعم تحديد الموقع');
-      }
-    });
-
     // إغلاق لوحة المعلومات
-    document.querySelector('.close').addEventListener('click', function () {
-      const panel = document.getElementById('info-panel');
-      panel.classList.remove('active');
-      setTimeout(() => {
-        panel.style.display = 'none';
-      }, 300);
-    });
+    function closeInfoPanel() {
+      document.getElementById("info-panel").style.display = "none";
+    }
   </script>
 </body>
 </html>
